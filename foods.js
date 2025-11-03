@@ -1,52 +1,72 @@
-import { $, $$ } from './utils.js';
-import { save } from './storage.js';
-export function renderFoods(el, state){
-  el.innerHTML = `<div class="card">
-    <h2>Lebensmittel</h2>
-    <div class="row"><input id="f-search" placeholder="Suche (Name/Tag)"><button id="f-add">Neu</button></div>
-    <small>Tags: fleischlos, vegan, vegetarisch, saisonal, lokal, huelse, soja, milch, getreide, sauce</small>
-    <div id="f-list" style="margin-top:10px"></div>
-  </div>`;
-  const list = $('#f-list', el);
-  function draw(){
-    const q = ($('#f-search', el).value||'').toLowerCase();
-    list.innerHTML='';
-    const foods = state.foods.slice().filter(f=> f.name.toLowerCase().includes(q) || (f.tags||[]).join(',').toLowerCase().includes(q)).sort((a,b)=> a.name.localeCompare(b.name));
-    for(const f of foods){
-      const card = document.createElement('div'); card.className='kpi'; card.innerHTML = `
-        <div>
-          <div><strong>${f.name}</strong></div>
-          <div class="small">${f.kcal} kcal · P ${f.p} g · F ${f.f} g · KH ${f.c} g (pro 100 g)</div>
-          <div class="chips">${(f.tags||[]).map(t=>`<span class="chip">${t}</span>`).join(' ')}</div>
-        </div>
-        <div style="min-width:160px">
-          <div class="row">
-            <button class="ok add">Zu Menü</button>
-            <button class="ghost edit">Bearbeiten</button>
-            <button class="warn del">Entf</button>
-          </div>
-        </div>`;
-      card.querySelector('.add').onclick = ()=> window.dispatchEvent(new CustomEvent('addToMenu', {detail:{food:f}}));
-      card.querySelector('.edit').onclick = ()=> edit(f);
-      card.querySelector('.del').onclick = ()=>{ state.foods = state.foods.filter(x=>x!==f); save(state); draw(); };
-      list.appendChild(card);
-    }
-  }
-  function edit(food){
-    const name = prompt('Name:', food?.name || '');
-    if(!name) return;
-    const kcal = +prompt('kcal /100g:', food?.kcal ?? 0);
-    const p = +prompt('Protein g/100g:', food?.p ?? 0);
-    const f = +prompt('Fett g/100g:', food?.f ?? 0);
-    const c = +prompt('KH g/100g:', food?.c ?? 0);
-    const portion = +prompt('Portionsgrösse:', food?.portion ?? 100);
-    const tags = prompt('Tags (Komma):', (food?.tags||[]).join(', '));
-    const obj = {name, kcal, p, f, c, portion, unit: food?.unit || 'g', tags: (tags||'').split(',').map(s=>s.trim()).filter(Boolean)};
-    const idx = state.foods.findIndex(x=>x.name.toLowerCase()===name.toLowerCase());
-    if(idx>=0) state.foods[idx]=obj; else state.foods.push(obj);
-    save(state); draw();
-  }
-  $('#f-add', el).onclick = ()=> edit(null);
-  $('#f-search', el).addEventListener('input', draw);
-  draw();
-}
+// Typische Schweizer Lebensmittel – Grundliste
+// Einfügen im Projektordner, ersetzt alte foods.js oder als foods_ch.js speichern
+
+const foods = [
+  // ---- Fleisch ----
+  { name: "Rindfleisch", category: "Fleisch", season: ["Ganzes Jahr"], use: ["Hauptspeise"], tags: ["tierisch","proteinreich"] },
+  { name: "Poulet", category: "Fleisch", season: ["Ganzes Jahr"], use: ["Hauptspeise"], tags: ["tierisch","mager","proteinreich"] },
+  { name: "Schweinefleisch", category: "Fleisch", season: ["Ganzes Jahr"], use: ["Hauptspeise"], tags: ["tierisch","fettreich","traditionell"] },
+  { name: "Kalbfleisch", category: "Fleisch", season: ["Ganzes Jahr"], use: ["Hauptspeise"], tags: ["tierisch","proteinreich"] },
+  { name: "Wurstwaren (Cervelat, Bratwurst)", category: "Fleisch", season: ["Ganzes Jahr"], use: ["Hauptspeise","Snack"], tags: ["verarbeitet"] },
+  { name: "Schinken", category: "Fleisch", season: ["Ganzes Jahr"], use: ["Beilage","Sandwich"], tags: ["verarbeitet","mager"] },
+  { name: "Speck", category: "Fleisch", season: ["Ganzes Jahr"], use: ["Beilage","Würze"], tags: ["fettreich"] },
+  { name: "Fisch (Lachs, Forelle, Felchen)", category: "Fleisch", season: ["Ganzes Jahr"], use: ["Hauptspeise"], tags: ["omega3","leicht"] },
+
+  // ---- Vegetarisch / Milch / Eier ----
+  { name: "Eier", category: "Vegetarisch", season: ["Ganzes Jahr"], use: ["Hauptspeise","Beilage"], tags: ["proteinreich"] },
+  { name: "Milch", category: "Vegetarisch", season: ["Ganzes Jahr"], use: ["Getränk","Kochzutat"], tags: ["milchprodukt"] },
+  { name: "Joghurt", category: "Vegetarisch", season: ["Ganzes Jahr"], use: ["Frühstück","Snack"], tags: ["proteinreich"] },
+  { name: "Käse (Emmentaler, Gruyère, Appenzeller)", category: "Vegetarisch", season: ["Ganzes Jahr"], use: ["Beilage","Hauptspeise"], tags: ["fettreich","proteinreich"] },
+  { name: "Hüttenkäse", category: "Vegetarisch", season: ["Ganzes Jahr"], use: ["Beilage","Snack"], tags: ["mager","proteinreich"] },
+  { name: "Butter", category: "Vegetarisch", season: ["Ganzes Jahr"], use: ["Backen","Sauce"], tags: ["fettreich"] },
+  { name: "Rahm / Sahne", category: "Vegetarisch", season: ["Ganzes Jahr"], use: ["Sauce","Dessert"], tags: ["fettreich"] },
+
+  // ---- Vegan / Grundnahrungsmittel ----
+  { name: "Tofu", category: "Vegan", season: ["Ganzes Jahr"], use: ["Hauptspeise","Beilage"], tags: ["proteinreich"] },
+  { name: "Tempeh", category: "Vegan", season: ["Ganzes Jahr"], use: ["Hauptspeise","Beilage"], tags: ["fermentiert","proteinreich"] },
+  { name: "Seitan", category: "Vegan", season: ["Ganzes Jahr"], use: ["Hauptspeise"], tags: ["gluten","proteinreich"] },
+  { name: "Kartoffeln", category: "Vegan", season: ["Ganzes Jahr"], use: ["Beilage","Hauptspeise"], tags: ["kohlenhydratreich"] },
+  { name: "Reis", category: "Vegan", season: ["Ganzes Jahr"], use: ["Beilage"], tags: ["kohlenhydratreich"] },
+  { name: "Pasta", category: "Vegan", season: ["Ganzes Jahr"], use: ["Hauptspeise","Beilage"], tags: ["kohlenhydratreich"] },
+  { name: "Brot (Ruchbrot, Vollkorn, Bürli)", category: "Vegan", season: ["Ganzes Jahr"], use: ["Beilage","Snack"], tags: ["ballaststoffreich"] },
+  { name: "Haferflocken", category: "Vegan", season: ["Ganzes Jahr"], use: ["Frühstück"], tags: ["ballaststoffreich"] },
+  { name: "Polenta / Maisgries", category: "Vegan", season: ["Ganzes Jahr"], use: ["Beilage"], tags: ["glutenfrei"] },
+
+  // ---- Hülsenfrüchte ----
+  { name: "Linsen", category: "Vegan", season: ["Ganzes Jahr"], use: ["Beilage","Hauptspeise"], tags: ["proteinreich"] },
+  { name: "Kichererbsen", category: "Vegan", season: ["Ganzes Jahr"], use: ["Hauptspeise","Sauce"], tags: ["proteinreich"] },
+  { name: "Bohnen", category: "Vegan", season: ["Sommer","Herbst"], use: ["Beilage","Hauptspeise"], tags: ["ballaststoffreich"] },
+  { name: "Erbsen", category: "Vegan", season: ["Frühling","Sommer"], use: ["Beilage","Suppe"], tags: ["proteinreich"] },
+
+  // ---- Gemüse ----
+  { name: "Karotten", category: "Vegan", season: ["Ganzes Jahr"], use: ["Beilage","Suppe"], tags: ["vitaminreich"] },
+  { name: "Zwiebeln", category: "Vegan", season: ["Ganzes Jahr"], use: ["Basis","Sauce"], tags: ["aromatisch"] },
+  { name: "Knoblauch", category: "Vegan", season: ["Ganzes Jahr"], use: ["Würze","Sauce"], tags: ["aromatisch"] },
+  { name: "Tomaten", category: "Vegan", season: ["Sommer"], use: ["Beilage","Sauce"], tags: ["vitaminreich"] },
+  { name: "Paprika / Peperoni", category: "Vegan", season: ["Sommer","Herbst"], use: ["Beilage","Salat"], tags: ["vitaminreich"] },
+  { name: "Spinat", category: "Vegan", season: ["Frühling","Herbst"], use: ["Beilage","Hauptspeise"], tags: ["eisenreich"] },
+  { name: "Broccoli", category: "Vegan", season: ["Herbst","Winter"], use: ["Beilage"], tags: ["vitaminreich"] },
+  { name: "Blumenkohl", category: "Vegan", season: ["Herbst","Winter"], use: ["Beilage"], tags: ["leicht"] },
+  { name: "Lauch / Porree", category: "Vegan", season: ["Herbst","Winter"], use: ["Basis","Suppe"], tags: ["aromatisch"] },
+  { name: "Kabis (Weiss-/Rotkohl)", category: "Vegan", season: ["Herbst","Winter"], use: ["Beilage","Hauptspeise"], tags: ["ballaststoffreich"] },
+
+  // ---- Früchte ----
+  { name: "Äpfel", category: "Vegan", season: ["Herbst","Winter"], use: ["Snack","Dessert"], tags: ["regional"] },
+  { name: "Birnen", category: "Vegan", season: ["Herbst","Winter"], use: ["Snack","Dessert"], tags: ["regional"] },
+  { name: "Beeren", category: "Vegan", season: ["Sommer"], use: ["Snack","Dessert"], tags: ["saisonal"] },
+  { name: "Bananen", category: "Vegan", season: ["Ganzes Jahr"], use: ["Snack","Dessert"], tags: ["import"] },
+  { name: "Trauben", category: "Vegan", season: ["Herbst"], use: ["Snack","Dessert"], tags: ["regional"] },
+
+  // ---- Saucen & Würzen ----
+  { name: "Mayonnaise", category: "Vegetarisch", season: ["Ganzes Jahr"], use: ["Sauce"], tags: ["fettreich"] },
+  { name: "Senf", category: "Vegan", season: ["Ganzes Jahr"], use: ["Sauce","Würze"], tags: ["aromatisch"] },
+  { name: "Ketchup", category: "Vegan", season: ["Ganzes Jahr"], use: ["Sauce"], tags: ["süsslich"] },
+  { name: "BBQ-Sauce", category: "Vegan", season: ["Ganzes Jahr"], use: ["Sauce"], tags: ["aromatisch"] },
+  { name: "Bouillon (Gemüse oder Fleisch)", category: "Variabel", season: ["Ganzes Jahr"], use: ["Basis","Suppe"], tags: ["würze"] },
+
+  // ---- Sonstiges ----
+  { name: "Schokolade", category: "Vegetarisch", season: ["Ganzes Jahr"], use: ["Dessert"], tags: ["süss"] },
+  { name: "Zucker / Honig", category: "Vegetarisch", season: ["Ganzes Jahr"], use: ["Süssen"], tags: ["energiereich"] },
+  { name: "Kaffee / Tee", category: "Vegan", season: ["Ganzes Jahr"], use: ["Getränk"], tags: ["anregend"] },
+  { name: "Wasser / Mineralwasser", category: "Vegan", season: ["Ganzes Jahr"], use: ["Getränk"], tags: ["neutral"] }
+];
