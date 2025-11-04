@@ -1,29 +1,127 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Nährstoff-Planer (Starter-Kit)</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nährstoff-Planer</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background: #161b22;
+      padding: 1rem;
+      text-align: center;
+      border-bottom: 1px solid #30363d;
+    }
+    header h1 {
+      margin: 0;
+      color: #58a6ff;
+    }
+    nav {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+    }
+    nav button {
+      background: none;
+      color: #e6edf3;
+      border: none;
+      padding: 0.75rem 1.2rem;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    nav button.active {
+      border-bottom: 2px solid #58a6ff;
+      font-weight: bold;
+    }
+    section {
+      display: none;
+      padding: 1rem;
+    }
+    section.active {
+      display: block;
+    }
+    .food-item {
+      border-bottom: 1px solid #30363d;
+      padding: 0.5rem 0;
+    }
+    .category {
+      font-size: 0.9em;
+      color: #8b949e;
+    }
+  </style>
 </head>
 <body>
-  <script src="ui-tabs.js"></script>
-  <script src="users.js"></script>
-  <script src="foods.js"></script>
-  <script src="menu.js"></script>
-  <script src="main.js"></script>
-  <header class="wrap">
-    <h1>Nährstoff-Planer (Starter‑Kit)</h1>
-    <p class="muted">Modular: Du kannst jede Datei anpassen/ersetzen. Offline-fähig, keine Abhängigkeiten.</p>
-    <nav id="tabs" class="tabs"></nav>
+  <header>
+    <h1>🥦 Nährstoff-Planer</h1>
+    <p>Ernährung planen, auswerten & verbessern – direkt im Browser.</p>
   </header>
 
-  <main class="wrap">
+  <nav id="tabs">
+    <button class="active" data-tab="users">Benutzer</button>
+    <button data-tab="foods">Lebensmittel</button>
+    <button data-tab="menu">Menüplan</button>
+    <button data-tab="alternatives">Alternativen</button>
+    <button data-tab="distribution">Verteilung</button>
+  </nav>
 
-  </main>
+  <!-- Tabs -->
+  <section id="users" class="active">
+    <h2>Benutzer</h2>
+    <p>Hier kannst du Benutzer hinzufügen, Aktivität & Ziel einstellen.</p>
+    <div id="user-list"></div>
+    <button onclick="addUser()">+ Neuer Benutzer</button>
+  </section>
 
-  <footer class="wrap small muted">Lokal gespeichert (localStorage). Optional erweiterbar um Sync (Firebase), PWA usw.</footer>
+  <section id="foods">
+    <h2>Lebensmittel</h2>
+    <p>Wähle und verwalte typische Lebensmittel.</p>
+    <input id="search" placeholder="Suche..." oninput="filterFoods(this.value)" />
+    <div id="food-list"></div>
+  </section>
 
-  <script type="module" src="main.js"></script>
-</body>
-</html>
+  <section id="menu">
+    <h2>Menüplan</h2>
+    <p>Stelle deinen Tagesplan zusammen.</p>
+    <div id="menu-output">Noch keine Auswahl.</div>
+  </section>
+
+  <section id="alternatives">
+    <h2>Alternativen</h2>
+    <p>Hier erscheinen Vorschläge für nachhaltige oder vegetarische Alternativen.</p>
+    <div id="alt-list"></div>
+  </section>
+
+  <section id="distribution">
+    <h2>Verteilung</h2>
+    <p>Nährstoffe werden auf Benutzer verteilt.</p>
+    <div id="distribution-output">Noch keine Daten.</div>
+  </section>
+
+  <script>
+    // Tabs-Steuerung
+    const buttons = document.querySelectorAll("nav button");
+    const sections = document.querySelectorAll("section");
+    buttons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        buttons.forEach(b => b.classList.remove("active"));
+        sections.forEach(s => s.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById(btn.dataset.tab).classList.add("active");
+      });
+    });
+
+    // Dummy Benutzerverwaltung
+    let users = JSON.parse(localStorage.getItem("users") || "[]");
+    function addUser() {
+      const name = prompt("Name des Benutzers?");
+      if (!name) return;
+      users.push({ name, ziel: "Erhalt", gewicht: 70 });
+      localStorage.setItem("users", JS
