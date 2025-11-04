@@ -109,7 +109,13 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  // -------- Tabs --------
+  // ---------- Diagnose-Leiste ----------
+  const diag = document.createElement('div');
+  diag.style.cssText = 'position:sticky;top:0;z-index:999;background:#161b22;border-bottom:1px solid #30363d;padding:.5rem;font-size:.9rem;color:#8b949e';
+  diag.textContent = 'Diagnose: initialisiere…';
+  document.body.prepend(diag);
+
+  // ---------- Tabs ----------
   const buttons = document.querySelectorAll("nav button");
   const sections = document.querySelectorAll("section");
   buttons.forEach(btn => {
@@ -121,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // -------- State + Storage --------
+  // ---------- State + Storage ----------
   const state = {
     users: JSON.parse(localStorage.getItem("users") || "[]"),
     menu: JSON.parse(localStorage.getItem("menu") || '{"frueh":[],"mittag":[],"abend":[],"snack":[]}')
@@ -131,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem("menu", JSON.stringify(state.menu));
   };
 
-  // -------- Benutzer --------
+  // ---------- Benutzer ----------
   function addUser() {
     const name = prompt("Name des Benutzers?");
     if (!name) return;
@@ -149,17 +155,30 @@ document.addEventListener('DOMContentLoaded', () => {
       .join("");
   }
   renderUsers();
-
-  // Button ohne inline-HTML anbinden (falls dein Button noch onclick hatte, ist das egal)
+  // Button anbinden (ohne inline onclick)
   const addBtn = document.querySelector('#users button');
   if (addBtn) addBtn.addEventListener('click', addUser);
 
-  // -------- Lebensmittel --------
-  // foods.js kann "const foods = [...]" oder "window.foods = [...]" liefern.
-  const foodsData =
-    (typeof window !== 'undefined' && typeof window.foods !== 'undefined') ? window.foods :
-    (typeof foods !== 'undefined') ? foods : [];
+  // ---------- Lebensmittel: Ladeprüfung + Fallback ----------
+  // 1) Bevorzugt aus window.foods (von foods.js)
+  let foodsData = (typeof window !== 'undefined' && Array.isArray(window.foods)) ? window.foods : null;
 
+  // 2) Notfall-Fallback, falls foods.js nicht geladen wurde oder leer ist
+  if (!foodsData || foodsData.length === 0) {
+    foodsData = [
+      { name:"Vollkornbrot", category:"Vegan", season:["Ganzes Jahr"], use:["Beilage","Snack"], tags:["ballaststoffreich","lokal"] },
+      { name:"Kartoffeln", category:"Vegan", season:["Ganzes Jahr"], use:["Beilage","Hauptspeise"], tags:["kohlenhydratreich","lokal"] },
+      { name:"Linsen (gekocht)", category:"Vegan", season:["Ganzes Jahr"], use:["Hauptspeise","Beilage"], tags:["proteinreich"] },
+      { name:"Joghurt/Skyr", category:"Vegetarisch", season:["Ganzes Jahr"], use:["Frühstück","Snack"], tags:["proteinreich"] },
+      { name:"Poulet", category:"Fleisch", season:["Ganzes Jahr"], use:["Hauptspeise"], tags:["mager","proteinreich"] }
+    ];
+  }
+
+  // Diagnose anzeigen
+  const wasFromFoodsJs = (typeof window !== 'undefined' && Array.isArray(window.foods) && window.foods.length > 0);
+  diag.textContent = `Diagnose: foods.js ${wasFromFoodsJs ? 'geladen' : 'NICHT gefunden – Fallback aktiv'} · Artikel: ${(wasFromFoodsJs?window.foods.length:foodsData.length)}`;
+
+  // ---------- Lebensmittel-UI ----------
   function renderFoods(list = foodsData) {
     const container = document.getElementById("food-list");
     if (!list.length) {
@@ -205,7 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   renderFoods();
 
-  // -------- Menüplan --------
+  // ---------- Menüplan ----------
   function addToMenu(meal, name) {
     const list = state.menu[meal] || (state.menu[meal] = []);
     const found = list.find(it => it.name === name);
@@ -265,5 +284,6 @@ document.addEventListener('DOMContentLoaded', () => {
   renderMenu();
 });
 </script>
+
 </body>
 </html>
