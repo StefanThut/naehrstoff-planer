@@ -105,162 +105,58 @@
     <div id="distribution-output">Noch keine Daten.</div>
   </section>
 
-<script src="foods.js"></script>
-
-<script>
-  // ---------------- Tabs ----------------
-  const buttons = document.querySelectorAll("nav button");
-  const sections = document.querySelectorAll("section");
-  buttons.forEach(btn => {
-    btn.addEventListener("click", () => {
-      buttons.forEach(b => b.classList.remove("active"));
-      sections.forEach(s => s.classList.remove("active"));
-      btn.classList.add("active");
-      document.getElementById(btn.dataset.tab).classList.add("active");
-    });
-  });
-
-  // ---------------- State + Storage ----------------
-  const state = {
-    users: JSON.parse(localStorage.getItem("users") || "[]"),
-    menu: JSON.parse(localStorage.getItem("menu") || '{"frueh":[],"mittag":[],"abend":[],"snack":[]}')
-  };
-  function save() {
-    localStorage.setItem("users", JSON.stringify(state.users));
-    localStorage.setItem("menu", JSON.stringify(state.menu));
-  }
-
-  // ---------------- Benutzer ----------------
-  function addUser() {
-    const name = prompt("Name des Benutzers?");
-    if (!name) return;
-    state.users.push({ name, ziel: "Erhalt", gewicht: 70 });
-    save(); renderUsers();
-  }
-  function renderUsers() {
-    const list = document.getElementById("user-list");
-    if (!state.users.length) {
-      list.innerHTML = `<div class="category">Noch keine Benutzer. Tippe auf „+ Neuer Benutzer”.</div>`;
-      return;
-    }
-    list.innerHTML = state.users
-      .map(u => `<div>👤 <strong>${u.name}</strong> — ${u.ziel}, ${u.gewicht} kg</div>`)
-      .join("");
-  }
-  renderUsers();
-  window.addUser = addUser; // für Button im HTML
-
-  // ---------------- Lebensmittel + Auswahl ----------------
-  let foods = Array.isArray(window.foods) ? window.foods : [];
-
-  function renderFoods(list = foods) {
-    const container = document.getElementById("food-list");
-    if (!list.length) {
-      container.innerHTML = `<div class="category">Keine Lebensmittel gefunden.</div>`;
-      return;
-    }
-    container.innerHTML = list.map(f => `
-      <div class="food-item">
-        <strong>${f.name}</strong><br>
-        <span class="category">${f.category}</span> | ${(f.use||[]).join(", ")}
-        <div style="margin-top:6px">
-          <select class="mealSel">
-            <option value="frueh">Frühstück</option>
-            <option value="mittag">Mittag</option>
-            <option value="abend">Abend</option>
-            <option value="snack">Snack</option>
-          </select>
-          <button class="addBtn" data-name="${f.name}">Hinzufügen</button>
-        </div>
-      </div>
-    `).join("");
-
-    // Buttons verbinden
-    container.querySelectorAll(".addBtn").forEach(btn => {
-      btn.addEventListener("click", (e) => {
-        const name = e.currentTarget.dataset.name;
-        const sel = e.currentTarget.parentElement.querySelector(".mealSel");
-        addToMenu(sel.value, name);
+  <script>
+    // Tabs-Steuerung
+    const buttons = document.querySelectorAll("nav button");
+    const sections = document.querySelectorAll("section");
+    buttons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        buttons.forEach(b => b.classList.remove("active"));
+        sections.forEach(s => s.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById(btn.dataset.tab).classList.add("active");
       });
     });
-  }
 
-  function filterFoods(q) {
-    q = (q || "").toLowerCase();
-    const filtered = foods.filter(f =>
-      f.name.toLowerCase().includes(q) ||
-      (f.category||"").toLowerCase().includes(q) ||
-      (f.use||[]).join(",").toLowerCase().includes(q)
-    );
-    renderFoods(filtered);
-  }
-  // beim Laden einmal zeichnen (falls foods.js schon da ist)
-  renderFoods();
-
-  // ---------------- Menüplan ----------------
-  function addToMenu(meal, name) {
-    const list = state.menu[meal] || (state.menu[meal] = []);
-    const found = list.find(it => it.name === name);
-    if (found) found.qty += 1;
-    else list.push({ name, qty: 1 });
-    save(); renderMenu();
-  }
-
-  function changeQty(meal, name, delta) {
-    const list = state.menu[meal]; if (!list) return;
-    const it = list.find(x => x.name === name); if (!it) return;
-    it.qty = Math.max(0, (it.qty || 0) + delta);
-    if (it.qty === 0) {
-      state.menu[meal] = list.filter(x => x.name !== name);
+    // Dummy Benutzerverwaltung
+    let users = JSON.parse(localStorage.getItem("users") || "[]");
+    function addUser() {
+      const name = prompt("Name des Benutzers?");
+      if (!name) return;
+      users.push({ name, ziel: "Erhalt", gewicht: 70 });
+      localStorage.setItem("users", JSON.stringify(users));
+      renderUsers();
     }
-    save(); renderMenu();
-  }
+    function renderUsers() {
+      const list = document.getElementById("user-list");
+      list.innerHTML = users.map(u => `<div>👤 ${u.name} (${u.ziel}, ${u.gewicht} kg)</div>`).join("");
+    }
+    renderUsers();
 
-  function removeItem(meal, name) {
-    state.menu[meal] = (state.menu[meal] || []).filter(x => x.name !== name);
-    save(); renderMenu();
-  }
-
-  function renderMeal(mealKey, title) {
-    const box = document.createElement("div");
-    const items = state.menu[mealKey] || [];
-    box.innerHTML = `
-      <h3>${title}</h3>
-      ${items.length === 0 ? '<div class="category">Leer</div>' : ""}
-      ${items.map(it => `
+    // Lebensmittel laden (aus foods.js falls vorhanden)
+    let foods = window.foods || [];
+    function renderFoods(list = foods) {
+      const container = document.getElementById("food-list");
+      container.innerHTML = list.map(f => `
         <div class="food-item">
-          <strong>${it.name}</strong>
-          <div style="margin-top:6px">
-            <button data-action="dec" data-meal="${mealKey}" data-name="${it.name}">−</button>
-            <span style="display:inline-block;min-width:32px;text-align:center">${it.qty || 1}×</span>
-            <button data-action="inc" data-meal="${mealKey}" data-name="${it.name}">+</button>
-            <button data-action="del" data-meal="${mealKey}" data-name="${it.name}" style="margin-left:6px">Entfernen</button>
-          </div>
-        </div>
-      `).join("")}
-    `;
-    // Events
-    box.querySelectorAll("button[data-action]").forEach(b=>{
-      const act=b.dataset.action, meal=b.dataset.meal, name=b.dataset.name;
-      b.addEventListener("click", ()=>{
-        if(act==="inc") changeQty(meal,name, +1);
-        if(act==="dec") changeQty(meal,name, -1);
-        if(act==="del") removeItem(meal,name);
-      });
-    });
-    return box;
-  }
+          <strong>${f.name}</strong><br>
+          <span class="category">${f.category}</span> | ${f.use.join(", ")}
+        </div>`).join("");
+    }
+    function filterFoods(q) {
+      q = q.toLowerCase();
+      const filtered = foods.filter(f => f.name.toLowerCase().includes(q));
+      renderFoods(filtered);
+    }
+    if (foods.length) renderFoods();
 
-  function renderMenu() {
-    const out = document.getElementById("menu-output");
-    out.innerHTML = ""; // leeren
-    out.appendChild(renderMeal("frueh","Frühstück"));
-    out.appendChild(renderMeal("mittag","Mittag"));
-    out.appendChild(renderMeal("abend","Abend"));
-    out.appendChild(renderMeal("snack","Snack"));
-  }
-  renderMenu();
+    // Platzhalter-Funktionen für weitere Tabs
+    document.getElementById("menu-output").innerText = "Menü-Tab wird später ergänzt.";
+    document.getElementById("alt-list").innerText = "Hier erscheinen alternative Produkte.";
+    document.getElementById("distribution-output").innerText = "Noch keine Verteilung berechnet.";
+  </script>
 
-  // Suche verbinden
-  document.getElementById("search").addEventListener("input", (e)=> filterFoods(e.target.value));
-</script>
+  <!-- Importiere deine Lebensmittel -->
+  <script src="foods.js"></script>
+</body>
+</html>
