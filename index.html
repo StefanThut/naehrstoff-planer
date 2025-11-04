@@ -136,27 +136,63 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem("menu", JSON.stringify(state.menu));
   };
 
-  // ---------- Benutzer ----------
-  function addUser() {
-    const name = prompt("Name des Benutzers?");
-    if (!name) return;
-    state.users.push({ name, ziel: "Erhalt", gewicht: 70 });
-    save(); renderUsers();
+  // -------- Benutzer --------
+function addUser() {
+  const name = prompt("Name des Benutzers?");
+  if (!name) return;
+  const gewicht = +prompt("Gewicht (kg)?", "70") || 70;
+  const aktiv = prompt('Tätigkeit (sitzend/moderat/aktiv)?', 'moderat') || 'moderat';
+  const ziel = prompt('Ziel (Erhalt/Aufbau/Verlust)?', 'Erhalt') || 'Erhalt';
+  state.users.push({ name, gewicht, aktiv, ziel });
+  save(); renderUsers();
+}
+
+function editUser(idx) {
+  const u = state.users[idx]; if (!u) return;
+  const name = prompt("Name:", u.name) ?? u.name;
+  const gewicht = +prompt("Gewicht (kg):", String(u.gewicht)) || u.gewicht;
+  const aktiv = prompt('Tätigkeit (sitzend/moderat/aktiv):', u.aktiv || 'moderat') || u.aktiv || 'moderat';
+  const ziel = prompt('Ziel (Erhalt/Aufbau/Verlust):', u.ziel || 'Erhalt') || u.ziel || 'Erhalt';
+  state.users[idx] = { name, gewicht, aktiv, ziel };
+  save(); renderUsers();
+}
+
+function deleteUser(idx) {
+  const u = state.users[idx]; if (!u) return;
+  if (!confirm(`Benutzer „${u.name}“ löschen?`)) return;
+  state.users.splice(idx, 1);
+  save(); renderUsers();
+}
+
+function renderUsers() {
+  const list = document.getElementById("user-list");
+  if (!state.users.length) {
+    list.innerHTML = `<div class="category">Noch keine Benutzer. Tippe auf „+ Neuer Benutzer”.</div>`;
+    return;
   }
-  function renderUsers() {
-    const list = document.getElementById("user-list");
-    if (!state.users.length) {
-      list.innerHTML = `<div class="category">Noch keine Benutzer. Tippe auf „+ Neuer Benutzer”.</div>`;
-      return;
-    }
-    list.innerHTML = state.users
-      .map(u => `<div>👤 <strong>${u.name}</strong> — ${u.ziel}, ${u.gewicht} kg</div>`)
-      .join("");
-  }
-  renderUsers();
-  // Button anbinden (ohne inline onclick)
-  const addBtn = document.querySelector('#users button');
-  if (addBtn) addBtn.addEventListener('click', addUser);
+  list.innerHTML = state.users.map((u, i) => `
+    <div class="food-item" style="display:flex;align-items:center;justify-content:space-between;gap:.5rem">
+      <div>👤 <strong>${u.name}</strong> — ${u.gewicht} kg · ${u.aktiv} · ${u.ziel}</div>
+      <div>
+        <button class="u-edit" data-idx="${i}">Bearbeiten</button>
+        <button class="u-del" data-idx="${i}">Löschen</button>
+      </div>
+    </div>
+  `).join("");
+
+  // Buttons binden
+  list.querySelectorAll(".u-edit").forEach(b => b.addEventListener("click", e => {
+    editUser(+e.currentTarget.dataset.idx);
+  }));
+  list.querySelectorAll(".u-del").forEach(b => b.addEventListener("click", e => {
+    deleteUser(+e.currentTarget.dataset.idx);
+  }));
+}
+
+// initial render + Add-Button verbinden
+renderUsers();
+const addBtn = document.getElementById('btn-add-user');
+if (addBtn) addBtn.addEventListener('click', addUser);
 
   // ---------- Lebensmittel: Ladeprüfung + Fallback ----------
   // 1) Bevorzugt aus window.foods (von foods.js)
